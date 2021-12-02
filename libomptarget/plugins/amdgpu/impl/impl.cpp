@@ -1,12 +1,12 @@
-//===--- amdgpu/impl/atmi.cpp ------------------------------------- C++ -*-===//
+//===--- amdgpu/impl/impl.cpp ------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "atmi_runtime.h"
 #include "hsa_api.h"
+#include "impl_runtime.h"
 #include "internal.h"
 #include "rt.h"
 #include <memory>
@@ -32,7 +32,7 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
   hsa_signal_value_t got = init;
   while (got == init) {
     got = hsa_signal_wait_scacquire(sig, HSA_SIGNAL_CONDITION_NE, init,
-                                    UINT64_MAX, ATMI_WAIT_STATE);
+                                    UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
   }
 
   if (got != success) {
@@ -42,15 +42,16 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
   return err;
 }
 
-struct atmiFreePtrDeletor {
+struct implFreePtrDeletor {
   void operator()(void *p) {
     core::Runtime::Memfree(p); // ignore failure to free
   }
 };
 
-hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
+hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
-                             hsa_agent_t agent) {
+                             hsa_agent_t agent,
+                             hsa_amd_memory_pool_t MemoryPool) {
   hsa_status_t rc = hsa_memory_copy(deviceDest, hostSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -61,13 +62,12 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   }
 
   void *tempHostPtr;
-  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("HostMalloc: Unable to alloc %zu bytes for temp scratch\n",
-                size);
+    DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
   if (invoke_hsa_copy(signal, deviceDest, tempHostPtr, size, agent) !=
@@ -77,9 +77,10 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
+hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
                              const void *deviceSrc, size_t size,
-                             hsa_agent_t agent) {
+                             hsa_agent_t agent,
+                             hsa_amd_memory_pool_t MemoryPool) {
   hsa_status_t rc = hsa_memory_copy(dest, deviceSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -90,13 +91,12 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
   }
 
   void *tempHostPtr;
-  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("HostMalloc: Unable to alloc %zu bytes for temp scratch\n",
-                size);
+    DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
 
   if (invoke_hsa_copy(signal, tempHostPtr, deviceSrc, size, agent) !=
       HSA_STATUS_SUCCESS) {

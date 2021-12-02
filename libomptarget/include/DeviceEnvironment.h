@@ -1,4 +1,4 @@
-//===---- device_environment.h - OpenMP GPU device environment --- CUDA -*-===//
+//===---- device_environment.h - OpenMP GPU device environment ---- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,12 +13,13 @@
 #ifndef _OMPTARGET_DEVICE_ENVIRONMENT_H_
 #define _OMPTARGET_DEVICE_ENVIRONMENT_H_
 
-#include "target_impl.h"
+// deviceRTL uses <stdint> and DeviceRTL uses explicit definitions
 
-struct omptarget_device_environmentTy {
-  int32_t debug_level;
+struct DeviceEnvironmentTy {
+  uint32_t DebugKind;
+  uint32_t NumDevices;
+  uint32_t DeviceNum;
+  uint32_t DynamicMemSize;
 };
-
-extern omptarget_device_environmentTy omptarget_device_environment;
 
 #endif
