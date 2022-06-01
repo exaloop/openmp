@@ -4453,6 +4453,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 
   /* allocate space for it. */
   new_thr = (kmp_info_t *)__kmp_allocate(sizeof(kmp_info_t));
+  __kmp_gc_add_roots(new_thr, sizeof(kmp_info_t));
 
   TCW_SYNC_PTR(__kmp_threads[new_gtid], new_thr);
 
