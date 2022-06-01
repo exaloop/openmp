@@ -1189,14 +1189,14 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
   return size;
 } // __kmp_round_up_to_va
 
-// __kmp_task_alloc_size: Figure out allocation size for taskdata
+// __kmpc_omp_task_alloc_size: Figure out allocation size for taskdata
 //
 // sizeof_kmp_task_t:  Size in bytes of kmp_task_t data structure including
 // private vars accessed in task.
 // sizeof_shareds:  Size in bytes of array of pointers to shared vars accessed
 // in task.
 // returns: size in bytes of taskdata to be allocated.
-size_t __kmp_task_alloc_size(size_t sizeof_kmp_task_t, size_t sizeof_shareds) {
+size_t __kmpc_omp_task_alloc_size(size_t sizeof_kmp_task_t, size_t sizeof_shareds) {
   size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
   shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(void *));
   return shareds_offset + sizeof_shareds;

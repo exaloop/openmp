@@ -3835,6 +3835,8 @@ KMP_EXPORT kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                              size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds,
                                              kmp_routine_entry_t task_entry);
+KMP_EXPORT size_t __kmpc_omp_task_alloc_size(size_t sizeof_kmp_task_t,
+                                             size_t sizeof_shareds);
 KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(
     ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags, size_t sizeof_kmp_task_t,
     size_t sizeof_shareds, kmp_routine_entry_t task_entry, kmp_int64 device_id);
