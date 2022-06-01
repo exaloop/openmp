@@ -306,6 +306,9 @@ static void __kmp_realloc_task_deque(kmp_info_t *thread,
   kmp_taskdata_t **new_deque =
       (kmp_taskdata_t **)__kmp_allocate(new_size * sizeof(kmp_taskdata_t *));
 
+  __kmp_gc_del_roots(thread_data->td.td_deque, size * sizeof(kmp_taskdata_t *));
+  __kmp_gc_add_roots(new_deque, new_size * sizeof(kmp_taskdata_t *));
+
   int i, j;
   for (i = thread_data->td.td_deque_head, j = 0; j < size;
        i = (i + 1) & TASK_DEQUE_MASK(thread_data->td), j++)
@@ -732,9 +735,9 @@ static void __kmp_free_task(kmp_int32 gtid, kmp_taskdata_t *taskdata,
   taskdata->td_flags.freed = 1;
 // deallocate the taskdata and shared variable blocks associated with this task
 #if USE_FAST_MEMORY
-  __kmp_fast_free(thread, taskdata);
+  // __kmp_fast_free(thread, taskdata);
 #else /* ! USE_FAST_MEMORY */
-  __kmp_thread_free(thread, taskdata);
+  // __kmp_thread_free(thread, taskdata);
 #endif
   KA_TRACE(20, ("__kmp_free_task: T#%d freed task %p\n", gtid, taskdata));
 }
@@ -1186,6 +1189,19 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
   return size;
 } // __kmp_round_up_to_va
 
+// __kmp_task_alloc_size: Figure out allocation size for taskdata
+//
+// sizeof_kmp_task_t:  Size in bytes of kmp_task_t data structure including
+// private vars accessed in task.
+// sizeof_shareds:  Size in bytes of array of pointers to shared vars accessed
+// in task.
+// returns: size in bytes of taskdata to be allocated.
+size_t __kmp_task_alloc_size(size_t sizeof_kmp_task_t, size_t sizeof_shareds) {
+  size_t shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
+  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(void *));
+  return shareds_offset + sizeof_shareds;
+}
+
 // __kmp_task_alloc: Allocate the taskdata and task data structures for a task
 //
 // loc_ref: source location information
@@ -1201,7 +1217,8 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
 kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                              kmp_tasking_flags_t *flags,
                              size_t sizeof_kmp_task_t, size_t sizeof_shareds,
-                             kmp_routine_entry_t task_entry) {
+                             kmp_routine_entry_t task_entry,
+                             kmp_task_t *preallocated) {
   kmp_task_t *task;
   kmp_taskdata_t *taskdata;
   kmp_info_t *thread = __kmp_threads[gtid];
@@ -1298,14 +1315,18 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   KA_TRACE(30, ("__kmp_task_alloc: T#%d Second malloc size: %ld\n", gtid,
                 sizeof_shareds));
 
-  // Avoid double allocation here by combining shareds with taskdata
+  if (preallocated == NULL) {
+    // Avoid double allocation here by combining shareds with taskdata
 #if USE_FAST_MEMORY
-  taskdata = (kmp_taskdata_t *)__kmp_fast_allocate(thread, shareds_offset +
-                                                               sizeof_shareds);
+    taskdata = (kmp_taskdata_t *)__kmp_fast_allocate(thread, shareds_offset +
+                                                                 sizeof_shareds);
 #else /* ! USE_FAST_MEMORY */
-  taskdata = (kmp_taskdata_t *)__kmp_thread_malloc(thread, shareds_offset +
-                                                               sizeof_shareds);
+    taskdata = (kmp_taskdata_t *)__kmp_thread_malloc(thread, shareds_offset +
+                                                                 sizeof_shareds);
 #endif /* USE_FAST_MEMORY */
+  } else {
+    task = preallocated;
+  }
 
   task = KMP_TASKDATA_TO_TASK(taskdata);
 
@@ -3282,6 +3303,7 @@ static void __kmp_alloc_task_deque(kmp_info_t *thread,
   thread_data->td.td_deque = (kmp_taskdata_t **)__kmp_allocate(
       INITIAL_TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
   thread_data->td.td_deque_size = INITIAL_TASK_DEQUE_SIZE;
+  __kmp_gc_add_roots(thread_data->td.td_deque, INITIAL_TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
 }
 
 // __kmp_free_task_deque:
@@ -3291,6 +3313,7 @@ static void __kmp_free_task_deque(kmp_thread_data_t *thread_data) {
   if (thread_data->td.td_deque != NULL) {
     __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
     TCW_4(thread_data->td.td_deque_ntasks, 0);
+    __kmp_gc_del_roots(thread_data->td.td_deque, thread_data->td.td_deque_size * sizeof(kmp_taskdata_t *));
     __kmp_free(thread_data->td.td_deque);
     thread_data->td.td_deque = NULL;
     __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);

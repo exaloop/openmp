@@ -9144,3 +9144,10 @@ void __kmp_set_nesting_mode_threads() {
   if (__kmp_nesting_mode == 1) // turn on nesting for this case only
     set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
 }
+
+kmp_gc_callbacks __gc_callbacks = { NULL, NULL };
+
+void __kmpc_set_gc_callbacks(gc_roots_callback add_roots, gc_roots_callback del_roots) {
+  __gc_callbacks.add_roots = add_roots;
+  __gc_callbacks.del_roots = del_roots;
+}
