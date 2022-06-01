@@ -4423,11 +4423,13 @@ struct kmp_gc_callbacks {
 extern kmp_gc_callbacks __gc_callbacks;
 
 static inline void __kmp_gc_add_roots(void *p, size_t size) {
-  __gc_callbacks.add_roots(p, ((char *)p) + size);
+  if (__gc_callbacks.add_roots)
+    __gc_callbacks.add_roots(p, ((char *)p) + size);
 }
 
 static inline void __kmp_gc_del_roots(void *p, size_t size) {
-  __gc_callbacks.del_roots(p, ((char *)p) + size);
+  if (__gc_callbacks.del_roots)
+    __gc_callbacks.del_roots(p, ((char *)p) + size);
 }
 
 #endif /* KMP_H */
