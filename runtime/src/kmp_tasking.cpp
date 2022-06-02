@@ -127,6 +127,7 @@ static void __kmp_free_task_stack(kmp_int32 gtid,
     stack_block->sb_next = NULL;
     stack_block->sb_prev = NULL;
     if (stack_block != &task_stack->ts_first_block) {
+      __kmp_gc_del_roots(stack_block, sizeof(kmp_stack_block_t));
       __kmp_thread_free(thread,
                         stack_block); // free the block, if not the first
     }
@@ -179,6 +180,7 @@ static void __kmp_push_task_stack(kmp_int32 gtid, kmp_info_t *thread,
     } else { // Alloc new block and link it up
       kmp_stack_block_t *new_block = (kmp_stack_block_t *)__kmp_thread_calloc(
           thread, sizeof(kmp_stack_block_t));
+      __kmp_gc_add_roots(new_block, sizeof(kmp_stack_block_t));
 
       task_stack->ts_top = &new_block->sb_block[0];
       stack_block->sb_next = new_block;
@@ -3377,6 +3379,7 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
         // to zero by __kmp_allocate().
         new_data = (kmp_thread_data_t *)__kmp_allocate(
             nthreads * sizeof(kmp_thread_data_t));
+        __kmp_gc_del_roots(old_data, maxthreads * sizeof(kmp_thread_data_t));
         __kmp_gc_add_roots(new_data, nthreads * sizeof(kmp_thread_data_t));
         // copy old data to new data
         KMP_MEMCPY_S((void *)new_data, nthreads * sizeof(kmp_thread_data_t),
@@ -3391,7 +3394,6 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
 #endif // BUILD_TIED_TASK_STACK
        // Install the new data and free the old data
         (*threads_data_p) = new_data;
-        __kmp_gc_del_roots(old_data, maxthreads * sizeof(kmp_thread_data_t));
         __kmp_free(old_data);
       } else {
         KE_TRACE(10, ("__kmp_realloc_task_threads_data: T#%d allocating "
