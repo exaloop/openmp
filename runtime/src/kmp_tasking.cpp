@@ -1441,7 +1441,8 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                   kmp_int32 flags, size_t sizeof_kmp_task_t,
                                   size_t sizeof_shareds,
-                                  kmp_routine_entry_t task_entry) {
+                                  kmp_routine_entry_t task_entry,
+                                  kmp_task_t *preallocated) {
   kmp_task_t *retval;
   kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
   __kmp_assert_valid_gtid(gtid);
@@ -1455,7 +1456,7 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                 sizeof_shareds, task_entry));
 
   retval = __kmp_task_alloc(loc_ref, gtid, input_flags, sizeof_kmp_task_t,
-                            sizeof_shareds, task_entry);
+                            sizeof_shareds, task_entry, preallocated);
 
   KA_TRACE(20, ("__kmpc_omp_task_alloc(exit): T#%d retval %p\n", gtid, retval));
 
