@@ -3820,6 +3820,7 @@ int __kmp_register_root(int initial_thread) {
     root_thread = root->r.r_uber_thread;
   } else {
     root_thread = (kmp_info_t *)__kmp_allocate(sizeof(kmp_info_t));
+    __kmp_gc_add_roots(root_thread, sizeof(kmp_info_t));
     if (__kmp_storage_map) {
       __kmp_print_thread_storage_map(root_thread, gtid);
     }
