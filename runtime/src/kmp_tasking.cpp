@@ -2348,6 +2348,7 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
         if (p_priv[tid] == NULL) {
           // allocate thread specific object lazily
           p_priv[tid] = __kmp_allocate(arr[i].reduce_size);
+          __kmp_gc_add_roots(p_priv[tid], arr[i].reduce_size);
           if (arr[i].reduce_init != NULL) {
             if (arr[i].reduce_orig != NULL) { // new interface
               ((void (*)(void *, void *))arr[i].reduce_init)(
@@ -2396,6 +2397,7 @@ static void __kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg) {
           f_comb(sh_data, pr_data[j]); // combine results
           if (f_fini)
             f_fini(pr_data[j]); // finalize if needed
+          __kmp_gc_del_roots(pr_data[j], arr[i].reduce_size);
           __kmp_free(pr_data[j]);
         }
       }
