@@ -3708,7 +3708,7 @@ extern kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                     size_t sizeof_kmp_task_t,
                                     size_t sizeof_shareds,
                                     kmp_routine_entry_t task_entry,
-                                    kmp_task_t *preallocated = nullptr);
+                                    kmp_taskdata_t *preallocated = nullptr);
 extern void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
                                      kmp_team_t *team, int tid,
                                      int set_curr_task);
@@ -3835,7 +3835,7 @@ KMP_EXPORT kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                              size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds,
                                              kmp_routine_entry_t task_entry,
-                                             kmp_task_t *preallocated = nullptr);
+                                             kmp_taskdata_t *preallocated = nullptr);
 KMP_EXPORT size_t __kmpc_omp_task_alloc_size(size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds);
 KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(
