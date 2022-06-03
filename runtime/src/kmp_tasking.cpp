@@ -3382,8 +3382,6 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
         // to zero by __kmp_allocate().
         new_data = (kmp_thread_data_t *)__kmp_allocate(
             nthreads * sizeof(kmp_thread_data_t));
-        __kmp_gc_del_roots(old_data, maxthreads * sizeof(kmp_thread_data_t));
-        __kmp_gc_add_roots(new_data, nthreads * sizeof(kmp_thread_data_t));
         // copy old data to new data
         KMP_MEMCPY_S((void *)new_data, nthreads * sizeof(kmp_thread_data_t),
                      (void *)old_data, maxthreads * sizeof(kmp_thread_data_t));
@@ -3407,7 +3405,6 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
         // kmp_reap_task_team( ).
         *threads_data_p = (kmp_thread_data_t *)__kmp_allocate(
             nthreads * sizeof(kmp_thread_data_t));
-        __kmp_gc_add_roots(*threads_data_p, nthreads * sizeof(kmp_thread_data_t));
 #ifdef BUILD_TIED_TASK_STACK
         // GEH: Figure out if this is the right thing to do
         for (i = 0; i < nthreads; i++) {

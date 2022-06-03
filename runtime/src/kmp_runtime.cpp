@@ -3820,7 +3820,7 @@ int __kmp_register_root(int initial_thread) {
     root_thread = root->r.r_uber_thread;
   } else {
     root_thread = (kmp_info_t *)__kmp_allocate(sizeof(kmp_info_t));
-    __kmp_gc_add_roots(root_thread, sizeof(kmp_info_t));
+    __kmp_gc_add_roots(&(root_thread->th.th_current_task), sizeof(kmp_taskdata_t *));
     if (__kmp_storage_map) {
       __kmp_print_thread_storage_map(root_thread, gtid);
     }
@@ -4454,7 +4454,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 
   /* allocate space for it. */
   new_thr = (kmp_info_t *)__kmp_allocate(sizeof(kmp_info_t));
-  __kmp_gc_add_roots(new_thr, sizeof(kmp_info_t));
+  __kmp_gc_add_roots(&(new_thr->th.th_current_task), sizeof(kmp_taskdata_t *));
 
   TCW_SYNC_PTR(__kmp_threads[new_gtid], new_thr);
 
