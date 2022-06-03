@@ -9147,9 +9147,14 @@ void __kmp_set_nesting_mode_threads() {
     set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
 }
 
-kmp_gc_callbacks __gc_callbacks = { NULL, NULL };
+kmp_gc_callbacks __gc_callbacks = { NULL, NULL, NULL, NULL };
 
-void __kmpc_set_gc_callbacks(gc_roots_callback add_roots, gc_roots_callback del_roots) {
+void __kmpc_set_gc_callbacks(gc_setup_callback get_stack_base,
+                             gc_setup_callback register_thread,
+                             gc_roots_callback add_roots,
+                             gc_roots_callback del_roots) {
+  __gc_callbacks.get_stack_base = get_stack_base;
+  __gc_callbacks.register_thread = register_thread;
   __gc_callbacks.add_roots = add_roots;
   __gc_callbacks.del_roots = del_roots;
 }

@@ -4168,8 +4168,20 @@ KMP_EXPORT void __kmpc_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
 KMP_EXPORT void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
 
 // GC callbacks
+struct kmp_gc_stack_base_t {
+  void *mem_base;
+#if defined(__e2k__) || defined(__ia64) || defined(__ia64__) || defined(_M_IA64)
+  void *eg_base;
+#endif
+};
+
+typedef int (*gc_setup_callback)(kmp_gc_stack_base_t *);
 typedef void (*gc_roots_callback)(void *, void *);
-extern void __kmpc_set_gc_callbacks(gc_roots_callback add_roots, gc_roots_callback del_roots);
+
+extern void __kmpc_set_gc_callbacks(gc_setup_callback get_stack_base,
+                                    gc_setup_callback register_thread,
+                                    gc_roots_callback add_roots,
+                                    gc_roots_callback del_roots);
 
 #ifdef __cplusplus
 }
@@ -4419,11 +4431,25 @@ static inline void __kmp_type_convert(T1 src, T2 *dest) {
 // GC
 
 struct kmp_gc_callbacks {
+  gc_setup_callback get_stack_base;
+  gc_setup_callback register_thread;
   gc_roots_callback add_roots;
   gc_roots_callback del_roots;
 };
 
 extern kmp_gc_callbacks __gc_callbacks;
+
+static inline int __kmp_gc_get_stack_base(kmp_gc_stack_base_t *sb) {
+  if (__gc_callbacks.get_stack_base)
+    return __gc_callbacks.get_stack_base(sb);
+  return -1;
+}
+
+static inline int __kmp_gc_register_thread(kmp_gc_stack_base_t *sb) {
+  if (__gc_callbacks.register_thread)
+    return __gc_callbacks.register_thread(sb);
+  return -1;
+}
 
 static inline void __kmp_gc_add_roots(void *p, size_t size) {
   if (__gc_callbacks.add_roots)
