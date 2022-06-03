@@ -2231,6 +2231,7 @@ void *__kmp_task_reduction_init(int gtid, int num, T *data) {
     if (!arr[i].flags.lazy_priv) {
       // allocate cache-line aligned block and fill it with zeros
       arr[i].reduce_priv = __kmp_allocate(nth * size);
+      __kmp_gc_add_roots(arr[i].reduce_priv, nth * size);
       arr[i].reduce_pend = (char *)(arr[i].reduce_priv) + nth * size;
       if (arr[i].reduce_init != NULL) {
         // initialize all thread-specific items
@@ -2390,6 +2391,7 @@ static void __kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg) {
         if (f_fini)
           f_fini(priv_data); // finalize if needed
       }
+      __kmp_gc_del_roots(pr_data, nth * size);
     } else {
       void **pr_data = (void **)(arr[i].reduce_priv);
       for (int j = 0; j < nth; ++j) {
