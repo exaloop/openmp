@@ -3707,7 +3707,8 @@ extern kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                     kmp_tasking_flags_t *flags,
                                     size_t sizeof_kmp_task_t,
                                     size_t sizeof_shareds,
-                                    kmp_routine_entry_t task_entry);
+                                    kmp_routine_entry_t task_entry,
+                                    kmp_taskdata_t *preallocated = nullptr);
 extern void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
                                      kmp_team_t *team, int tid,
                                      int set_curr_task);
@@ -3833,7 +3834,10 @@ KMP_EXPORT kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                              kmp_int32 flags,
                                              size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds,
-                                             kmp_routine_entry_t task_entry);
+                                             kmp_routine_entry_t task_entry,
+                                             kmp_taskdata_t *preallocated = nullptr);
+KMP_EXPORT size_t __kmpc_omp_task_alloc_size(size_t sizeof_kmp_task_t,
+                                             size_t sizeof_shareds);
 KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(
     ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags, size_t sizeof_kmp_task_t,
     size_t sizeof_shareds, kmp_routine_entry_t task_entry, kmp_int64 device_id);
@@ -4163,6 +4167,22 @@ extern void __kmpc_error(ident_t *loc, int severity, const char *message);
 KMP_EXPORT void __kmpc_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
 KMP_EXPORT void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved);
 
+// GC callbacks
+struct kmp_gc_stack_base_t {
+  void *mem_base;
+#if defined(__e2k__) || defined(__ia64) || defined(__ia64__) || defined(_M_IA64)
+  void *eg_base;
+#endif
+};
+
+typedef int (*gc_setup_callback)(kmp_gc_stack_base_t *);
+typedef void (*gc_roots_callback)(void *, void *);
+
+extern void __kmpc_set_gc_callbacks(gc_setup_callback get_stack_base,
+                                    gc_setup_callback register_thread,
+                                    gc_roots_callback add_roots,
+                                    gc_roots_callback del_roots);
+
 #ifdef __cplusplus
 }
 #endif
@@ -4405,6 +4425,40 @@ struct kmp_convert<SourceType, TargetType, false, false, false, false> {
 template <typename T1, typename T2>
 static inline void __kmp_type_convert(T1 src, T2 *dest) {
   *dest = kmp_convert<T1, T2>::to(src);
+}
+
+
+// GC
+
+struct kmp_gc_callbacks {
+  gc_setup_callback get_stack_base;
+  gc_setup_callback register_thread;
+  gc_roots_callback add_roots;
+  gc_roots_callback del_roots;
+};
+
+extern kmp_gc_callbacks __gc_callbacks;
+
+static inline int __kmp_gc_get_stack_base(kmp_gc_stack_base_t *sb) {
+  if (__gc_callbacks.get_stack_base)
+    return __gc_callbacks.get_stack_base(sb);
+  return -1;
+}
+
+static inline int __kmp_gc_register_thread(kmp_gc_stack_base_t *sb) {
+  if (__gc_callbacks.register_thread)
+    return __gc_callbacks.register_thread(sb);
+  return -1;
+}
+
+static inline void __kmp_gc_add_roots(void *p, size_t size) {
+  if (__gc_callbacks.add_roots)
+    __gc_callbacks.add_roots(p, ((char *)p) + size);
+}
+
+static inline void __kmp_gc_del_roots(void *p, size_t size) {
+  if (__gc_callbacks.del_roots)
+    __gc_callbacks.del_roots(p, ((char *)p) + size);
 }
 
 #endif /* KMP_H */
