@@ -735,12 +735,14 @@ static void __kmp_free_task(kmp_int32 gtid, kmp_taskdata_t *taskdata,
   KMP_DEBUG_ASSERT(taskdata->td_incomplete_child_tasks == 0);
 
   taskdata->td_flags.freed = 1;
-// deallocate the taskdata and shared variable blocks associated with this task
+  if (!__gc_callbacks.add_roots) {
+    // deallocate the taskdata and shared variable blocks associated with this task
 #if USE_FAST_MEMORY
-  // __kmp_fast_free(thread, taskdata);
+    __kmp_fast_free(thread, taskdata);
 #else /* ! USE_FAST_MEMORY */
-  // __kmp_thread_free(thread, taskdata);
+    __kmp_thread_free(thread, taskdata);
 #endif
+  }
   KA_TRACE(20, ("__kmp_free_task: T#%d freed task %p\n", gtid, taskdata));
 }
 
@@ -1318,6 +1320,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                 sizeof_shareds));
 
   if (preallocated == NULL) {
+    KMP_DEBUG_ASSERT(!__gc_callbacks.add_roots);
     // Avoid double allocation here by combining shareds with taskdata
 #if USE_FAST_MEMORY
     taskdata = (kmp_taskdata_t *)__kmp_fast_allocate(thread, shareds_offset +
@@ -1327,6 +1330,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                                                  sizeof_shareds);
 #endif /* USE_FAST_MEMORY */
   } else {
+    KMP_DEBUG_ASSERT(__gc_callbacks.add_roots);
     taskdata = preallocated;
   }
 
