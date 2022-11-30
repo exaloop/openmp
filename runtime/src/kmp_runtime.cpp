@@ -9157,4 +9157,5 @@ void __kmpc_set_gc_callbacks(gc_setup_callback get_stack_base,
   __gc_callbacks.register_thread = register_thread;
   __gc_callbacks.add_roots = add_roots;
   __gc_callbacks.del_roots = del_roots;
+  __kmp_do_serial_initialize();
 }
